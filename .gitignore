@@ -12,3 +12,4 @@ dist/
 build/
 /tmp/
 /uploads/
+test_taxsight.db
