@@ -4,7 +4,7 @@ services:
   api:
     build: .
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
       - DATABASE_URL=postgresql://taxsight:taxsight@db:5432/taxsight
       - SECRET_KEY=${SECRET_KEY:-change-me-in-production}

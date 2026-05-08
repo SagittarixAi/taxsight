@@ -1,0 +1,116 @@
+import { useState } from 'react'
+import { Link, useNavigate } from 'react-router-dom'
+import { useForm } from 'react-hook-form'
+import { zodResolver } from '@hookform/resolvers/zod'
+import { z } from 'zod'
+import { Mail, Lock, Eye, EyeOff } from 'lucide-react'
+import api from '../api/client'
+
+const schema = z.object({
+  email: z.string().email('Please enter a valid email'),
+  password: z.string().min(6, 'Password must be at least 6 characters'),
+})
+
+type FormData = z.infer<typeof schema>
+
+export default function Login() {
+  const navigate = useNavigate()
+  const [showPassword, setShowPassword] = useState(false)
+  const [serverError, setServerError] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm<FormData>({
+    resolver: zodResolver(schema),
+  })
+
+  const onSubmit = async (data: FormData) => {
+    setIsLoading(true)
+    setServerError('')
+    try {
+      const response = await api.post('/auth/login', data)
+      localStorage.setItem('token', response.data.access_token)
+      navigate('/dashboard')
+    } catch (err: any) {
+      setServerError(err.response?.data?.detail || 'Invalid email or password')
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  return (
+    <div className="min-h-screen bg-[#F8F7FA] flex items-center justify-center px-4">
+      <div className="w-full max-w-md">
+        <div className="text-center mb-8">
+          <Link to="/" className="inline-flex items-center gap-2 mb-6">
+            <div className="w-10 h-10 bg-[#6C3CE1] rounded-xl flex items-center justify-center">
+              <span className="text-white font-extrabold text-lg">TS</span>
+            </div>
+            <span className="text-2xl font-extrabold text-[#1A1523] tracking-tight">TaxSight</span>
+          </Link>
+          <h1 className="text-2xl font-extrabold text-[#1A1523] mb-2">Welcome back</h1>
+          <p className="text-[#8B8599] text-sm">Sign in to your TaxSight account</p>
+        </div>
+
+        <div className="card p-8">
+          {serverError && (
+            <div className="mb-6 p-4 bg-[#FFF5F5] border border-[#E53E3E]/20 rounded-lg text-sm text-[#E53E3E] font-medium">
+              {serverError}
+            </div>
+          )}
+
+          <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
+            <div>
+              <label className="label">Email</label>
+              <div className="relative">
+                <Mail size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8B8599]" />
+                <input
+                  type="email"
+                  className={`input-field pl-10 ${errors.email ? 'error' : ''}`}
+                  placeholder="you@example.com"
+                  {...register('email')}
+                />
+              </div>
+              {errors.email && <p className="input-error">{errors.email.message}</p>}
+            </div>
+
+            <div>
+              <label className="label">Password</label>
+              <div className="relative">
+                <Lock size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-[#8B8599]" />
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className={`input-field pl-10 pr-10 ${errors.password ? 'error' : ''}`}
+                  placeholder="••••••••"
+                  {...register('password')}
+                />
+                <button
+                  type="button"
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-[#8B8599] hover:text-[#3D364A]"
+                  onClick={() => setShowPassword(!showPassword)}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </button>
+              </div>
+              {errors.password && <p className="input-error">{errors.password.message}</p>}
+            </div>
+
+            <button type="submit" className="btn-primary w-full" disabled={isLoading}>
+              {isLoading ? 'Signing in...' : 'Sign in'}
+            </button>
+          </form>
+        </div>
+
+        <p className="text-center mt-6 text-sm text-[#8B8599]">
+          Don't have an account?{' '}
+          <Link to="/register" className="font-semibold text-[#6C3CE1] hover:text-[#5528B8] transition-colors">
+            Sign up
+          </Link>
+        </p>
+      </div>
+    </div>
+  )
+}
