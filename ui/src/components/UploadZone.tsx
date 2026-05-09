@@ -6,6 +6,15 @@ interface UploadZoneProps {
   disabled?: boolean
 }
 
+const supportedTypes = [
+  { icon: FileText, label: 'W-2', color: 'text-[#6C3CE1]' },
+  { icon: FileSpreadsheet, label: '1099', color: 'text-[#6C3CE1]' },
+  { icon: Receipt, label: 'Receipts', color: 'text-[#6C3CE1]' },
+  { icon: FileText, label: 'PDF', color: 'text-[#E55A25]' },
+  { icon: FileSpreadsheet, label: 'CSV/XLS', color: 'text-[#00A88F]' },
+  { icon: FileText, label: 'Images', color: 'text-[#3D6A8E]' },
+]
+
 export default function UploadZone({ onFilesSelected, disabled }: UploadZoneProps) {
   const [isDragOver, setIsDragOver] = useState(false)
 
@@ -54,11 +63,11 @@ export default function UploadZone({ onFilesSelected, disabled }: UploadZoneProp
 
   return (
     <div
-      className={`relative border-2 border-dashed rounded-xl p-10 text-center transition-all duration-250 cursor-pointer
+      className={`relative border-2 border-dashed rounded-2xl p-12 text-center transition-all duration-250 cursor-pointer
         ${disabled ? 'opacity-50 cursor-not-allowed' : ''}
         ${isDragOver
-          ? 'border-[#00D5B3] bg-[#E6FAF6] scale-[1.01]'
-          : 'border-[#E5E4E7] hover:border-[#00D5B3] hover:bg-[#F8F7FA]'}`}
+          ? 'border-accent bg-accent-bg scale-[1.01] shadow-lg'
+          : 'border-[#E5E4E7] hover:border-accent hover:bg-[#F8F7FA] hover:shadow-md'}`}
       onDragEnter={handleDragIn}
       onDragLeave={handleDragOut}
       onDragOver={handleDrag}
@@ -74,29 +83,23 @@ export default function UploadZone({ onFilesSelected, disabled }: UploadZoneProp
         disabled={disabled}
         accept=".pdf,.png,.jpg,.jpeg,.csv,.xlsx,.xls,.doc,.docx"
       />
-      <div className="flex flex-col items-center gap-4">
-        <div className={`w-16 h-16 rounded-2xl flex items-center justify-center transition-colors duration-250 ${isDragOver ? 'bg-[#00D5B3]/10 text-[#00D5B3]' : 'bg-[#E6FAF6] text-[#00A88F]'}`}>
-          <Upload size={28} />
+      <div className="flex flex-col items-center gap-5">
+        <div className={`w-20 h-20 rounded-2xl flex items-center justify-center transition-all duration-250 ${isDragOver ? 'bg-accent/15 text-accent scale-110' : 'bg-[#E6FAF6] text-[#00A88F]'}`}>
+          <Upload size={32} />
         </div>
         <div>
-          <p className="text-base font-semibold text-[#1A1523] mb-1">
-            {isDragOver ? 'Drop files here' : 'Drag & drop your tax documents'}
+          <p className="text-base font-bold text-[#1A1523] mb-1">
+            {isDragOver ? 'Drop files to upload' : 'Drag & drop your tax documents'}
           </p>
           <p className="text-sm text-[#8B8599]">or click to browse files</p>
         </div>
-        <div className="flex items-center gap-4 pt-2">
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F8F7FA] border border-[#E5E4E7]">
-            <FileText size={14} className="text-[#6C3CE1]" />
-            <span className="text-xs font-medium text-[#3D364A]">W-2</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F8F7FA] border border-[#E5E4E7]">
-            <FileSpreadsheet size={14} className="text-[#6C3CE1]" />
-            <span className="text-xs font-medium text-[#3D364A]">1099</span>
-          </div>
-          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F8F7FA] border border-[#E5E4E7]">
-            <Receipt size={14} className="text-[#6C3CE1]" />
-            <span className="text-xs font-medium text-[#3D364A]">Receipts</span>
-          </div>
+        <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+          {supportedTypes.map((t) => (
+            <div key={t.label} className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#F8F7FA] border border-[#E5E4E7]">
+              <t.icon size={13} className={t.color} />
+              <span className="text-xs font-medium text-[#3D364A]">{t.label}</span>
+            </div>
+          ))}
         </div>
       </div>
     </div>

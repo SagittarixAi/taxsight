@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.core.config import settings
 from app.api import auth, documents, calculations, summaries
+from app.api.documents_enhanced import router as documents_enhanced_router
 
 app = FastAPI(
     title="TaxSight API",
@@ -25,6 +26,7 @@ app.include_router(auth.router, prefix="/api/auth", tags=["Auth"])
 app.include_router(documents.router, prefix="/api/documents", tags=["Documents"])
 app.include_router(calculations.router, prefix="/api/calculations", tags=["Calculations"])
 app.include_router(summaries.router, prefix="/api/summaries", tags=["Summaries"])
+app.include_router(documents_enhanced_router, prefix="/api", tags=["Documents (AI Enhanced)"])
 
 
 @app.get("/health")

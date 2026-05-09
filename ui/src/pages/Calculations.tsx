@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
-import { Download, TrendingUp, TrendingDown, FileText, ArrowRight, Upload } from 'lucide-react'
+import { Download, TrendingUp, TrendingDown, FileText, ArrowRight, Upload, FileJson } from 'lucide-react'
 import api from '../api/client'
 import BracketBar from '../components/BracketBar'
 import EmptyState from '../components/EmptyState'
@@ -47,15 +47,30 @@ export default function Calculations() {
 
   if (isLoading) {
     return (
-      <div className="space-y-6">
-        <div className="skeleton h-8 w-32" />
-        <div className="card p-6 space-y-3">
-          <div className="skeleton h-6 w-48" />
-          <div className="skeleton h-10 w-64" />
+      <div className="space-y-8">
+        <div className="skeleton h-9 w-36" />
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div className="card p-8 space-y-4">
+            <div className="skeleton h-3 w-28 rounded-sm" />
+            <div className="skeleton h-10 w-48 rounded-md" />
+            <div className="skeleton h-4 w-40 rounded-sm" />
+          </div>
+          <div className="card p-8 space-y-4">
+            <div className="skeleton h-3 w-32 rounded-sm" />
+            <div className="flex justify-between"><div className="skeleton h-4 w-24 rounded-sm" /><div className="skeleton h-4 w-20 rounded-sm" /></div>
+            <div className="flex justify-between"><div className="skeleton h-4 w-28 rounded-sm" /><div className="skeleton h-4 w-20 rounded-sm" /></div>
+            <div className="border-t pt-3"><div className="skeleton h-5 w-full" /></div>
+          </div>
         </div>
-        <div className="card p-6 space-y-3">
-          <div className="skeleton h-6 w-40" />
-          <div className="skeleton h-8 w-full" />
+        <div className="card p-8 space-y-4">
+          <div className="skeleton h-4 w-48 rounded-sm" />
+          <div className="skeleton h-8 w-full rounded-md" />
+          <div className="skeleton h-3 w-full rounded-sm" />
+          <div className="flex gap-6">
+            <div className="skeleton h-3 w-20 rounded-sm" />
+            <div className="skeleton h-3 w-20 rounded-sm" />
+            <div className="skeleton h-3 w-20 rounded-sm" />
+          </div>
         </div>
       </div>
     )
@@ -64,7 +79,7 @@ export default function Calculations() {
   if (!hasData) {
     return (
       <EmptyState
-        icon={<FileText size={40} />}
+        icon={<FileText size={32} />}
         title="No calculations yet"
         description="Upload documents and run a calculation to see your tax breakdown."
         action={
@@ -94,68 +109,71 @@ export default function Calculations() {
   const pct = (n: number) => n.toFixed(1) + '%'
 
   return (
-    <div className="space-y-6 fade-in max-w-4xl">
+    <div className="space-y-8 fade-in max-w-4xl pb-8">
       <div>
-        <h1 className="text-2xl font-extrabold text-[#1A1523] tracking-tight">Calculations</h1>
-        <p className="text-sm text-[#8B8599] mt-1">Tax year {calc.tax_year} · Filing {calc.filing_status}</p>
+        <h1 className="text-2xl font-bold text-ink tracking-tight">Calculations</h1>
+        <p className="text-sm text-ink-muted mt-1">Tax year {calc.tax_year} · Filing {calc.filing_status}</p>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className={`card p-6 border-t-2 ${isRefund ? 'border-[#00D5B3]' : 'border-[#E53E3E]'}`}>
-          <div className="flex items-center gap-2 mb-1">
-            {isRefund ? <TrendingUp size={16} className="text-[#00A88F]" /> : <TrendingDown size={16} className="text-[#E53E3E]" />}
-            <span className="text-xs font-semibold uppercase tracking-wider text-[#8B8599]">
-              {isRefund ? 'Estimated Refund' : 'Amount Owed'}
-            </span>
-          </div>
-          <div className={`text-4xl font-extrabold tabular-nums tracking-tight ${isRefund ? 'text-[#00A88F]' : 'text-[#E53E3E]'}`}>
-            {fmt(refundAmount)}
-          </div>
-          <p className="text-sm text-[#8B8599] mt-2">
-            Effective rate: <span className="font-semibold text-[#1A1523]">{pct(effectiveRate)}</span>
+      <div className="card p-8 bg-gradient-to-r from-surface-white to-accent-bg/30 border-accent/20">
+        <div className="flex items-center gap-3 mb-4">
+          {isRefund ? <TrendingUp size={20} className="text-accent-dark" /> : <TrendingDown size={20} className="text-error" />}
+          <span className="text-xs font-bold uppercase tracking-widest text-ink-muted">
+            {isRefund ? 'Estimated Refund' : 'Amount Owed'}
+          </span>
+        </div>
+        <div className={`text-5xl font-bold tabular-nums tracking-tight ${isRefund ? 'text-accent-dark' : 'text-error'}`}>
+          {fmt(refundAmount)}
+        </div>
+        <div className="flex items-center gap-4 mt-3">
+          <p className="text-sm text-ink-muted">
+            Effective rate: <span className="font-semibold text-ink">{pct(effectiveRate)}</span>
+          </p>
+          <span className="text-ink-muted/30">|</span>
+          <p className="text-sm text-ink-muted">
+            Marginal: <span className="font-semibold text-ink">{calc.marginal_rate ? pct(calc.marginal_rate * 100) : '—'}</span>
           </p>
         </div>
+      </div>
 
-        <div className="card p-6">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[#8B8599] mb-4">Income & Deduction Summary</h3>
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-[#8B8599]">Gross Income</span>
-              <span className="text-sm font-semibold text-[#1A1523] tabular-nums">{fmt(calc.gross_income)}</span>
-            </div>
-            <div className="flex justify-between items-center">
-              <span className="text-sm text-[#8B8599]">Total Deductions</span>
-              <span className="text-sm font-semibold text-[#1A1523] tabular-nums">−{fmt(calc.total_deductions)}</span>
-            </div>
-            <div className="border-t border-[#E5E4E7] pt-3 flex justify-between items-center">
-              <span className="text-sm font-semibold text-[#1A1523]">Taxable Income</span>
-              <span className="text-sm font-bold text-[#1A1523] tabular-nums">{fmt(taxableIncome)}</span>
-            </div>
-            <div className="border-t border-[#E5E4E7] pt-3 flex justify-between items-center">
-              <span className="text-sm font-semibold text-[#1A1523]">Total Tax</span>
-              <span className="text-sm font-bold text-[#1A1523] tabular-nums">{fmt(calc.total_tax ?? 0)}</span>
-            </div>
+      <div className="card p-8">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted mb-5">Income & Deduction Summary</h3>
+        <div className="space-y-4">
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-ink-muted">Gross Income</span>
+            <span className="text-sm font-semibold text-ink tabular-nums">{fmt(calc.gross_income)}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="text-sm text-ink-muted">Total Deductions</span>
+            <span className="text-sm font-semibold text-ink tabular-nums">−{fmt(calc.total_deductions)}</span>
+          </div>
+          <div className="border-t border-border pt-4 flex justify-between items-center">
+            <span className="text-sm font-semibold text-ink">Taxable Income</span>
+            <span className="text-sm font-bold text-ink tabular-nums">{fmt(taxableIncome)}</span>
+          </div>
+          <div className="border-t border-border pt-4 flex justify-between items-center">
+            <span className="text-sm font-semibold text-ink">Total Tax</span>
+            <span className="text-sm font-bold text-ink tabular-nums">{fmt(calc.total_tax ?? 0)}</span>
           </div>
         </div>
       </div>
 
-      <div className="card p-6">
+      <div className="card p-8">
+        <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted mb-5">Marginal Tax Rate Breakdown</h3>
         <BracketBar brackets={brackets} totalIncome={taxableIncome} />
-        <div className="mt-4 flex items-center gap-2 text-sm text-[#8B8599]">
-          <span>Marginal rate: <span className="font-semibold text-[#1A1523]">{calc.marginal_rate ? pct(calc.marginal_rate * 100) : '—'}</span></span>
-        </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div className="card p-6">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[#8B8599] mb-3">Standard Deduction</h3>
-          <div className="text-2xl font-extrabold text-[#1A1523] tabular-nums mb-2">{fmt(calc.standard_deduction ?? 0)}</div>
+          <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted mb-3">Standard Deduction</h3>
+          <div className="text-2xl font-bold text-ink tabular-nums mb-2">{fmt(calc.standard_deduction ?? 0)}</div>
         </div>
         <div className="card p-6">
-          <h3 className="text-xs font-semibold uppercase tracking-wider text-[#8B8599] mb-3">Itemized Deductions</h3>
-          <div className="text-2xl font-extrabold text-[#1A1523] tabular-nums mb-2">{fmt(calc.itemized_deductions ?? 0)}</div>
-          <p className="text-xs text-[#8B8599]">
-            Better off with <span className="font-semibold text-[#1A1523]">
+          <h3 className="text-xs font-bold uppercase tracking-widest text-ink-muted mb-3">Itemized Deductions</h3>
+          <div className="text-2xl font-bold text-ink tabular-nums mb-2">{fmt(calc.itemized_deductions ?? 0)}</div>
+          <p className="text-xs text-ink-muted">
+            Better off with{' '}
+            <span className="font-semibold text-ink">
               {((calc.standard_deduction ?? 0) >= (calc.itemized_deductions ?? 0)) ? 'Standard' : 'Itemized'}
             </span>
           </p>
@@ -165,28 +183,29 @@ export default function Calculations() {
       <div className="flex items-center gap-3 pt-2">
         <button className="btn-primary">
           <Download size={16} />
-          Download PDF
+          Export PDF
         </button>
         <button className="btn-outline">
-          Save Report
+          <FileJson size={16} />
+          Export Data
         </button>
       </div>
 
       {calculations.length > 1 && (
         <div className="card p-6">
-          <h3 className="text-sm font-semibold text-[#1A1523] mb-3">All Calculations</h3>
+          <h3 className="text-sm font-semibold text-ink mb-4">Previous Calculations</h3>
           <div className="space-y-2">
-            {calculations.map((c) => (
-              <div key={c.id} className="flex items-center justify-between p-3 rounded-lg bg-[#F8F7FA]">
+            {calculations.slice(1).map((c) => (
+              <div key={c.id} className="flex items-center justify-between p-4 rounded-xl bg-surface hover:bg-border-light transition-colors duration-150 cursor-pointer">
                 <div>
-                  <span className="text-sm font-medium text-[#1A1523]">{c.tax_year}</span>
-                  <span className="text-xs text-[#8B8599] ml-2">{c.filing_status}</span>
+                  <span className="text-sm font-semibold text-ink">{c.tax_year}</span>
+                  <span className="text-xs text-ink-muted ml-2">{c.filing_status}</span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className={`text-sm font-bold tabular-nums ${(c.refund_or_owed ?? 0) > 0 ? 'text-[#00A88F]' : 'text-[#E53E3E]'}`}>
+                  <span className={`text-sm font-bold tabular-nums ${(c.refund_or_owed ?? 0) > 0 ? 'text-accent-dark' : 'text-error'}`}>
                     {fmt(Math.abs(c.refund_or_owed ?? 0))}
                   </span>
-                  <ArrowRight size={14} className="text-[#8B8599]" />
+                  <ArrowRight size={14} className="text-ink-muted" />
                 </div>
               </div>
             ))}

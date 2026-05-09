@@ -1,16 +1,46 @@
+@theme {
+  --color-primary: var(--primary);
+  --color-primary-light: var(--primary-light);
+  --color-primary-dark: var(--primary-dark);
+  --color-primary-bg: var(--primary-bg);
+  --color-secondary: var(--secondary);
+  --color-secondary-light: var(--secondary-light);
+  --color-secondary-dark: var(--secondary-dark);
+  --color-secondary-bg: var(--secondary-bg);
+  --color-accent: var(--accent);
+  --color-accent-light: var(--accent-light);
+  --color-accent-dark: var(--accent-dark);
+  --color-accent-bg: var(--accent-bg);
+  --color-ink: var(--ink);
+  --color-ink-light: var(--ink-light);
+  --color-ink-muted: var(--ink-muted);
+  --color-surface: var(--bg);
+  --color-surface-white: var(--bg-white);
+  --color-border: var(--border);
+  --color-border-light: var(--border-light);
+  --color-success: var(--success);
+  --color-warning: var(--warning);
+  --color-error: var(--error);
+  --color-error-bg: var(--error-bg);
+  --font-display: 'Cabinet Grotesk', 'Inter', system-ui, sans-serif;
+  --shadow-primary: 0 4px 12px rgba(30, 58, 95, 0.25);
+  --shadow-accent: 0 4px 12px rgba(14, 165, 160, 0.25);
+  --shadow-secondary: 0 4px 12px rgba(255, 107, 53, 0.25);
+}
+
 :root {
-  --primary: #6C3CE1;
-  --primary-light: #8B6CE8;
-  --primary-dark: #5528B8;
-  --primary-bg: #F4F0FC;
+  --primary: #1E3A5F;
+  --primary-light: #3D6A8E;
+  --primary-dark: #132A47;
+  --primary-bg: #EEF1F5;
   --secondary: #FF6B35;
   --secondary-light: #FF8A5C;
   --secondary-dark: #E55A25;
   --secondary-bg: #FFF3ED;
-  --accent: #00D5B3;
-  --accent-light: #33DFC4;
-  --accent-dark: #00A88F;
-  --accent-bg: #E6FAF6;
+  --accent: #0EA5A0;
+  --accent-light: #30BFB9;
+  --accent-dark: #0A7D79;
+  --accent-bg: #E6F7F6;
   --ink: #1A1523;
   --ink-light: #3D364A;
   --ink-muted: #8B8599;
@@ -18,7 +48,7 @@
   --bg-white: #FFFFFF;
   --border: #E5E4E7;
   --border-light: #F0EFF3;
-  --success: #00D5B3;
+  --success: #0EA5A0;
   --warning: #FF6B35;
   --error: #E53E3E;
   --error-bg: #FFF5F5;
@@ -54,6 +84,10 @@ body {
 
 #root {
   min-height: 100vh;
+}
+
+.font-display {
+  font-family: 'Cabinet Grotesk', 'Inter', system-ui, sans-serif;
 }
 
 .tabular-nums {
@@ -110,7 +144,7 @@ body {
 
 .btn-primary:hover {
   background: var(--primary-dark);
-  box-shadow: 0 4px 12px rgba(108, 60, 225, 0.3);
+  box-shadow: var(--shadow-primary);
 }
 
 .btn-primary:active {
@@ -141,7 +175,7 @@ body {
 
 .btn-secondary:hover {
   background: var(--secondary-dark);
-  box-shadow: 0 4px 12px rgba(255, 107, 53, 0.3);
+  box-shadow: var(--shadow-secondary);
 }
 
 .btn-secondary:active {
@@ -190,7 +224,7 @@ body {
 
 .input-field:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px rgba(108, 60, 225, 0.1);
+  box-shadow: 0 0 0 3px rgba(30, 58, 95, 0.1);
 }
 
 .input-field.error {

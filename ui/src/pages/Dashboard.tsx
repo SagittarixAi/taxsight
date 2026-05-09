@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { DollarSign, Wallet, Brain, Upload, ChevronRight } from 'lucide-react'
+import { DollarSign, Wallet, Brain, Upload, ChevronRight, ChartBar, Calculator } from 'lucide-react'
 import { LineChart, Line, ResponsiveContainer } from 'recharts'
 import api from '../api/client'
 import KpiCard from '../components/KpiCard'
@@ -47,19 +47,26 @@ export default function Dashboard() {
 
   if (hasData === null) {
     return (
-      <div className="space-y-6">
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="space-y-8">
+        <div className="skeleton h-9 w-40" />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="card p-6 space-y-3">
-              <div className="skeleton h-4 w-24" />
-              <div className="skeleton h-9 w-40" />
-              <div className="skeleton h-4 w-32" />
+            <div key={i} className="card p-8 space-y-4">
+              <div className="skeleton h-3 w-24 rounded-sm" />
+              <div className="skeleton h-10 w-44 rounded-md" />
+              <div className="skeleton h-4 w-32 rounded-sm" />
             </div>
           ))}
         </div>
-        <div className="card p-6 space-y-3">
-          <div className="skeleton h-4 w-48" />
-          <div className="skeleton h-8 w-full" />
+        <div className="card p-8 space-y-4">
+          <div className="skeleton h-4 w-48 rounded-sm" />
+          <div className="skeleton h-8 w-full rounded-md" />
+          <div className="skeleton h-3 w-full rounded-sm" />
+          <div className="flex gap-6">
+            <div className="skeleton h-3 w-20 rounded-sm" />
+            <div className="skeleton h-3 w-20 rounded-sm" />
+            <div className="skeleton h-3 w-20 rounded-sm" />
+          </div>
         </div>
       </div>
     )
@@ -68,7 +75,7 @@ export default function Dashboard() {
   if (!hasData || calculations.length === 0) {
     return (
       <EmptyState
-        icon={<Upload size={48} />}
+        icon={<Upload size={32} />}
         title="Upload your first document to get started"
         description="Upload W-2s, 1099s, or receipts and let our AI analyze your tax situation."
         action={
@@ -81,77 +88,107 @@ export default function Dashboard() {
     )
   }
 
+  const fmt = (n: number) => new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', maximumFractionDigits: 0 }).format(Math.abs(n))
+
   return (
-    <div className="space-y-6 fade-in">
-      <div>
-        <h1 className="text-2xl font-extrabold text-[#1A1523] tracking-tight">Dashboard</h1>
-        <p className="text-sm text-[#8B8599] mt-1">Your tax overview at a glance</p>
+    <div className="space-y-8 fade-in pb-8">
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-ink tracking-tight">Dashboard</h1>
+          <p className="text-sm text-ink-muted mt-1">Your tax overview at a glance</p>
+        </div>
+        <span className="text-xs text-ink-muted bg-surface-white rounded-lg px-3 py-1.5 border border-border shadow-sm">
+          Last updated: just now
+        </span>
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {calculations[0]?.refund_or_owed != null ? null : (
+        <div className="card p-6 bg-gradient-to-r from-primary-bg to-accent-bg border-primary/10">
+          <div className="flex items-center justify-between">
+            <div>
+              <p className="text-sm font-bold text-ink">Documents uploaded — ready for calculation</p>
+              <p className="text-xs text-ink-muted mt-0.5">Run a calculation to see your refund estimate and tax breakdown</p>
+            </div>
+            <button className="btn-primary" onClick={() => navigate('/calculations')}>
+              <Calculator size={16} />
+              Run Calculation
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
         <KpiCard
           title="Refund Estimate"
-          value="$2,450"
-          subtitle="±$200 confidence interval"
+          value={calculations[0]?.refund_or_owed != null ? fmt(calculations[0].refund_or_owed) : '—'}
+          subtitle={calculations[0]?.refund_or_owed != null ? '±$200 confidence interval' : 'Run calculation to see estimate'}
           trend="up"
-          trendValue="+$320 from last year"
-          icon={<DollarSign size={18} />}
+          trendValue={calculations[0]?.refund_or_owed != null ? '+$320 from last year' : undefined}
+          icon={<DollarSign size={20} />}
           color="teal"
         >
-          <div className="h-10 -mx-2">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={sparkData}>
-                <Line type="monotone" dataKey="v" stroke="#00D5B3" strokeWidth={2} dot={false} />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
+          {calculations[0]?.refund_or_owed != null && (
+            <div className="h-12 -mx-2">
+              <ResponsiveContainer width="100%" height="100%">
+                <LineChart data={sparkData}>
+                  <Line type="monotone" dataKey="v" stroke="#00D5B3" strokeWidth={2} dot={false} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          )}
         </KpiCard>
 
         <KpiCard
           title="Amount Owed"
-          value="$0"
-          subtitle="No tax liability detected"
+          value={calculations[0]?.total_tax != null ? fmt(calculations[0].total_tax) : '$0'}
+          subtitle={calculations[0]?.total_tax != null ? 'Tax liability calculated' : 'No tax liability detected'}
           trend="neutral"
-          icon={<Wallet size={18} />}
+          icon={<Wallet size={20} />}
           color="amber"
         />
 
         <KpiCard
           title="AI Status"
-          value="Ready"
-          subtitle="All documents processed"
-          icon={<Brain size={18} />}
-          color="purple"
+          value={calculations[0]?.refund_or_owed != null ? 'Complete' : 'Ready'}
+          subtitle={calculations[0]?.refund_or_owed != null ? 'All documents processed' : `${calculations[0] ? 'Awaiting calculation' : 'No documents yet'}`}
+          icon={<Brain size={20} />}
+          color="navy"
         />
       </div>
 
-      <div className="card p-6">
+      <div className="card p-8">
+        <div className="flex items-center gap-3 mb-5 pb-4 border-b border-border">
+          <div className="w-8 h-8 rounded-lg bg-primary-bg flex items-center justify-center text-primary">
+            <ChartBar size={16} />
+          </div>
+          <h3 className="font-semibold text-ink">Tax Bracket Breakdown</h3>
+        </div>
         <BracketBar brackets={placeholderBrackets} totalIncome={85000} />
       </div>
 
-      <div className="card p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-sm font-semibold text-[#1A1523]">Recent Activity</h3>
-          <button className="text-xs font-medium text-[#6C3CE1] hover:text-[#5528B8] flex items-center gap-1 transition-colors">
+      <div className="card p-8">
+        <div className="flex items-center justify-between mb-5">
+          <h3 className="text-sm font-semibold text-ink">Recent Activity</h3>
+          <button className="text-xs font-medium text-primary hover:text-primary-dark flex items-center gap-1 transition-colors">
             View all <ChevronRight size={14} />
           </button>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto -mx-2">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-[#E5E4E7]">
-                <th className="text-left py-3 px-3 text-[#8B8599] font-medium text-xs uppercase tracking-wider">Date</th>
-                <th className="text-left py-3 px-3 text-[#8B8599] font-medium text-xs uppercase tracking-wider">Activity</th>
-                <th className="text-right py-3 px-3 text-[#8B8599] font-medium text-xs uppercase tracking-wider">Status</th>
+              <tr className="border-b border-border">
+                <th className="text-left py-3 px-4 text-ink-muted font-semibold text-xs uppercase tracking-wider">Date</th>
+                <th className="text-left py-3 px-4 text-ink-muted font-semibold text-xs uppercase tracking-wider">Activity</th>
+                <th className="text-right py-3 px-4 text-ink-muted font-semibold text-xs uppercase tracking-wider">Status</th>
               </tr>
             </thead>
             <tbody>
               {recentActivity.map((item, i) => (
-                <tr key={i} className="border-b border-[#F0EFF3] last:border-0 hover:bg-[#F8F7FA] transition-colors">
-                  <td className="py-3 px-3 text-[#8B8599] tabular-nums">{item.date}</td>
-                  <td className="py-3 px-3 text-[#1A1523] font-medium">{item.description}</td>
-                  <td className="py-3 px-3 text-right">
-                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-[#E6FAF6] text-[#00A88F] text-xs font-medium">
+                <tr key={i} className="border-b border-border-light last:border-0 hover:bg-surface transition-colors duration-150">
+                  <td className="py-3.5 px-4 text-ink-muted tabular-nums">{item.date}</td>
+                  <td className="py-3.5 px-4 text-ink font-medium">{item.description}</td>
+                  <td className="py-3.5 px-4 text-right">
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-[#E6FAF6] text-[#00A88F] text-xs font-semibold">
                       Complete
                     </span>
                   </td>

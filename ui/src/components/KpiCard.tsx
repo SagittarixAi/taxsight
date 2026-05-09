@@ -8,33 +8,33 @@ interface KpiCardProps {
   trend?: 'up' | 'down' | 'neutral'
   trendValue?: string
   icon?: ReactNode
-  color: 'teal' | 'amber' | 'purple'
+  color: 'teal' | 'amber' | 'navy'
   children?: ReactNode
 }
 
 const colorConfig = {
-  teal: { bg: 'bg-[#E6FAF6]', text: 'text-[#00A88F]', border: 'border-[#00D5B3]/20' },
-  amber: { bg: 'bg-[#FFF3ED]', text: 'text-[#E55A25]', border: 'border-[#FF6B35]/20' },
-  purple: { bg: 'bg-[#F4F0FC]', text: 'text-[#5528B8]', border: 'border-[#6C3CE1]/20' },
+  teal: { bg: 'bg-accent-bg', text: 'text-accent-dark', border: 'border-accent/20' },
+  amber: { bg: 'bg-secondary-bg', text: 'text-secondary-dark', border: 'border-secondary/20' },
+  navy: { bg: 'bg-primary-bg', text: 'text-primary-dark', border: 'border-primary/20' },
 }
 
 export default function KpiCard({ title, value, subtitle, trend, trendValue, icon, color, children }: KpiCardProps) {
   const c = colorConfig[color]
 
   return (
-    <div className={`card p-6 border-t-2 ${c.border} flex flex-col gap-3`}>
+    <div className={`card p-8 border-t-2 ${c.border} flex flex-col gap-4 transition-all hover:shadow-md`}>
       <div className="flex items-center justify-between">
-        <span className="text-sm font-medium text-[#8B8599] tracking-wide uppercase">{title}</span>
-        {icon && <div className={`w-9 h-9 rounded-lg ${c.bg} ${c.text} flex items-center justify-center`}>{icon}</div>}
+        <span className="text-xs font-semibold text-ink-muted tracking-widest uppercase">{title}</span>
+        {icon && <div className={`w-10 h-10 rounded-xl ${c.bg} ${c.text} flex items-center justify-center`}>{icon}</div>}
       </div>
-      <div className="text-3xl font-extrabold text-[#1A1523] tabular-nums tracking-tight">{value}</div>
+      <div className="text-4xl font-bold text-ink tabular-nums tracking-tight leading-none">{value}</div>
       {subtitle && (
         <div className="flex items-center gap-2">
           {trend === 'up' && <TrendingUp size={14} className={c.text} />}
           {trend === 'down' && <TrendingDown size={14} className={c.text} />}
-          <span className="text-sm text-[#8B8599]">{subtitle}</span>
+          <span className="text-sm text-ink-muted">{subtitle}</span>
           {trendValue && (
-            <span className={`text-sm font-semibold ${trend === 'up' ? 'text-[#00A88F]' : trend === 'down' ? 'text-[#E53E3E]' : 'text-[#8B8599]'}`}>
+            <span className={`text-sm font-semibold ${trend === 'up' ? 'text-accent-dark' : trend === 'down' ? 'text-error' : 'text-ink-muted'}`}>
               {trendValue}
             </span>
           )}

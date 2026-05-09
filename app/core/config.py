@@ -13,7 +13,12 @@ class Settings(BaseSettings):
     DATABASE_URL: str = "postgresql://taxsight:taxsight@localhost:5432/taxsight"
 
     # CORS
-    CORS_ORIGINS: List[str] = ["http://localhost:3000", "http://localhost:5173"]
+    CORS_ORIGINS: List[str] = [
+        "http://localhost:3000",
+        "http://localhost:5173",
+        "https://taxsight.ai",
+        "https://www.taxsight.ai",
+    ]
 
     # JWT
     SECRET_KEY: str = "change-me-in-production"
