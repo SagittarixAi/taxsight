@@ -20,7 +20,7 @@ const placeholderBrackets = [
 const recentActivity = [
   { date: 'Apr 12, 2026', description: 'W-2 uploaded', status: 'complete' },
   { date: 'Apr 11, 2026', description: '1099-NEC processed', status: 'complete' },
-  { date: 'Apr 10, 2026', description: 'Refund estimate generated', status: 'complete' },
+  { date: 'Apr 10, 2026', description: 'Review prepared', status: 'complete' },
   { date: 'Apr 08, 2026', description: 'Account created', status: 'complete' },
 ]
 
@@ -107,7 +107,7 @@ export default function Dashboard() {
           <div className="flex items-center justify-between">
             <div>
               <p className="text-sm font-bold text-ink">Documents uploaded — ready for calculation</p>
-              <p className="text-xs text-ink-muted mt-0.5">Run a calculation to see your refund estimate and tax breakdown</p>
+              <p className="text-xs text-ink-muted mt-0.5">Run a review to see your potential tax picture</p>
             </div>
             <button className="btn-primary" onClick={() => navigate('/calculations')}>
               <Calculator size={16} />
@@ -121,7 +121,7 @@ export default function Dashboard() {
         <KpiCard
           title="Refund Estimate"
           value={calculations[0]?.refund_or_owed != null ? fmt(calculations[0].refund_or_owed) : '—'}
-          subtitle={calculations[0]?.refund_or_owed != null ? '±$200 confidence interval' : 'Run calculation to see estimate'}
+          subtitle={calculations[0]?.refund_or_owed != null ? '±$200 estimated range' : 'Ready to review'}
           trend="up"
           trendValue={calculations[0]?.refund_or_owed != null ? '+$320 from last year' : undefined}
           icon={<DollarSign size={20} />}

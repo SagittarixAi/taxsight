@@ -119,7 +119,7 @@ export default function Calculations() {
         <div className="flex items-center gap-3 mb-4">
           {isRefund ? <TrendingUp size={20} className="text-accent-dark" /> : <TrendingDown size={20} className="text-error" />}
           <span className="text-xs font-bold uppercase tracking-widest text-ink-muted">
-            {isRefund ? 'Estimated Refund' : 'Amount Owed'}
+            {isRefund ? 'Potential Refund' : 'Amount Owed'}
           </span>
         </div>
         <div className={`text-5xl font-bold tabular-nums tracking-tight ${isRefund ? 'text-accent-dark' : 'text-error'}`}>

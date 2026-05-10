@@ -59,14 +59,14 @@ export default function Landing() {
             {`See what you're owed.`}
           </h1>
           <p className="text-lg md:text-xl text-ink-muted max-w-lg mb-12 md:text-center lg:text-left leading-relaxed">
-            {`AI-powered tax clarity that scans your documents, estimates your refund, and prepares filing-ready summaries \u2014 all in one place.`}
+            {`Scan your documents, explore potential deductions, and prepare filing-ready summaries \u2014 all in one place.`}
           </p>
           <div className="flex items-center gap-4 flex-wrap mb-8">
             <Link
               to="/register"
               className="px-9 py-4 bg-secondary text-white text-base font-semibold rounded-xl hover:bg-secondary-dark transition-all hover:shadow-secondary hover:shadow-lg inline-flex items-center gap-2"
             >
-              Get my refund estimate
+              Explore your options
               <ChevronRight size={18} />
             </Link>
             <a
@@ -206,8 +206,8 @@ export default function Landing() {
               icon: DollarSign,
               bg: 'bg-secondary-bg',
               iconColor: 'text-secondary-dark',
-              title: `Smart Refund Estimates`,
-              desc: `See hidden deductions instantly. Get real-time refund estimates with a confidence range so you know exactly what to expect.`,
+              title: `Smart Deduction Finder`,
+              desc: `Discover potential deductions from your documents. See estimated ranges so you know what to explore.`,
             },
             {
               icon: FileCheck,
@@ -265,7 +265,7 @@ export default function Landing() {
               iconColor: 'text-secondary-dark',
               badgeBg: 'bg-secondary',
               title: `Review and export`,
-              desc: `Review your estimates and generate organized tax reports for you or your preparer in one click.`,
+              desc: `Review your items and generate organized tax reports for you or your preparer in one click.`,
             },
           ].map(({ step, icon: Icon, bg, iconColor, badgeBg, title, desc }) => (
             <div key={step} className="flex-1 flex items-start gap-6">
@@ -295,7 +295,7 @@ export default function Landing() {
         </p>
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-10">
           {[
-            { icon: Briefcase, title: `W-2 Employees`, desc: `Estimate your refund before filing.` },
+            { icon: Briefcase, title: `W-2 Employees`, desc: `See what you may qualify for.` },
             { icon: Zap, title: `Gig Workers`, desc: `Automatically organize multiple income streams.` },
             { icon: Building2, title: `Small Business`, desc: `Deductions and write-offs made simple.` },
             { icon: Home, title: `Landlords`, desc: `Track rental deductions in one place.` },
@@ -398,7 +398,7 @@ export default function Landing() {
                   <span className="w-5 h-5 rounded-full bg-accent-bg flex items-center justify-center flex-shrink-0">
                     <Check size={14} className="text-accent-dark" />
                   </span>
-                  Basic refund estimate
+                  Refund range preview
                 </li>
                 <li className="flex items-center gap-2">
                   <span className="w-5 h-5 rounded-full bg-accent-bg flex items-center justify-center flex-shrink-0">
@@ -552,14 +552,14 @@ export default function Landing() {
           Know your numbers before tax season surprises you.
         </h2>
         <p className="text-lg md:text-xl text-ink-muted max-w-xl mx-auto mb-16 leading-relaxed">
-          Upload your documents and get a clear, personalized estimate in minutes. No commitment. No credit card.
+          Upload your documents and get a clear, personalized clear picture of your potential tax situation. No commitment. No credit card.
         </p>
         <div className="flex items-center justify-center gap-4 flex-wrap">
           <Link
             to="/register"
             className="px-12 py-5 bg-secondary text-white text-xl font-semibold rounded-xl hover:bg-secondary-dark transition-all hover:shadow-secondary hover:shadow-lg inline-flex items-center gap-2"
           >
-            Get my refund estimate
+            Explore your options
             <ArrowRight size={20} />
           </Link>
           <a
@@ -583,8 +583,8 @@ export default function Landing() {
           <div className="space-y-6 mb-16">
             {[
               { q: `Is my tax data safe?`, a: `Absolutely. All documents are encrypted with AES-256 at rest and in transit. We\u2019re on a SOC 2 Pathway and never sell or share your data.` },
-              { q: `Do I need to be a tax expert?`, a: `Not at all. TaxSight is designed for everyday taxpayers. Upload your documents and we\u2019ll handle the analysis \u2014 no tax knowledge required.` },
-              { q: `Is my refund estimate guaranteed?`, a: `Your estimate is based on the documents and information you provide. It\u2019s highly accurate but not a guarantee \u2014 always review with a tax professional before filing.` },
+              { q: `Do I need to be a tax expert?`, a: `Not at all. TaxSight is designed for everyday taxpayers. Upload your documents and the tool organizes everything \u2014 no tax knowledge required. You review what applies to you.` },
+              { q: `How accurate is the information?`, a: `Information shown is based on what you upload. Always review with a tax professional before filing.` },
               { q: `What documents do I need?`, a: `W-2s, 1099s, receipts for deductions, and any other tax-related documents. We support PDF, images, and most common formats.` },
             ].map(({ q, a }) => (
               <details key={q} className="group py-8 px-10 lg:py-10 lg:px-12 rounded-xl border border-border bg-surface-white transition-all duration-300 hover:bg-surface hover:border-primary/30">
