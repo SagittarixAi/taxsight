@@ -1,5 +1,5 @@
 """Authentication API endpoints."""
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
 
@@ -12,12 +12,13 @@ from app.core.security import (
 )
 from app.models.user import User
 from app.schemas.auth import TokenResponse, UserCreate, UserResponse
+from app.services.audit import log_action, get_client_ip
 
 router = APIRouter()
 
 
 @router.post("/register", response_model=TokenResponse, status_code=status.HTTP_201_CREATED)
-def register(payload: UserCreate, db: Session = Depends(get_db)) -> TokenResponse:
+def register(payload: UserCreate, request: Request, db: Session = Depends(get_db)) -> TokenResponse:
     existing = db.query(User).filter(User.email == payload.email).first()
     if existing:
         raise HTTPException(
@@ -33,6 +34,14 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> TokenRespons
     db.commit()
     db.refresh(user)
 
+    log_action(
+        user_id=user.id,
+        action="user.register",
+        resource_type="user",
+        resource_id=str(user.id),
+        ip_address=get_client_ip(request),
+    )
+
     token = create_access_token(data={"sub": str(user.id)})
     return TokenResponse(
         access_token=token,
@@ -43,6 +52,7 @@ def register(payload: UserCreate, db: Session = Depends(get_db)) -> TokenRespons
 @router.post("/login", response_model=TokenResponse)
 def login(
     form_data: OAuth2PasswordRequestForm = Depends(),
+    request: Request = None,
     db: Session = Depends(get_db),
 ) -> TokenResponse:
     user = db.query(User).filter(User.email == form_data.username).first()
@@ -51,6 +61,14 @@ def login(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Invalid email or password",
         )
+    log_action(
+        user_id=user.id,
+        action="user.login",
+        resource_type="user",
+        resource_id=str(user.id),
+        ip_address=get_client_ip(request) if request else None,
+    )
+
     token = create_access_token(data={"sub": str(user.id)})
     return TokenResponse(
         access_token=token,
