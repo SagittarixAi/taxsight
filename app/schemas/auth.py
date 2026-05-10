@@ -1,11 +1,10 @@
-"""Pydantic schemas for authentication."""
+"""Auth schemas."""
 from datetime import datetime
-
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, EmailStr
 
 
 class UserCreate(BaseModel):
-    email: str
+    email: EmailStr
     password: str
     full_name: str | None = None
 
@@ -14,9 +13,10 @@ class UserResponse(BaseModel):
     id: int
     email: str
     full_name: str | None
+    tier: str | None = None
     created_at: datetime
 
-    model_config = ConfigDict(from_attributes=True)
+    model_config = {"from_attributes": True}
 
 
 class TokenResponse(BaseModel):
