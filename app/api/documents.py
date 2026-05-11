@@ -72,7 +72,7 @@ async def upload_document(
         raise HTTPException(status_code=400, detail=str(exc))
 
     rows = rest_insert("documents", {
-        "user_id": current_user.id,
+        "user_id": current_user["id"],
         "filename": file.filename or unique_name,
         "file_path": file_path,
         "file_type": file.content_type,

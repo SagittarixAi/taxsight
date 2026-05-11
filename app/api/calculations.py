@@ -38,7 +38,7 @@ async def create_calculation(
     )
 
     rows = rest_insert("tax_summaries", {
-        "user_id": current_user.id,
+        "user_id": current_user["id"],
         "tax_year": data.tax_year,
         "gross_income": result.gross_income,
         "total_deductions": result.total_deductions,
@@ -52,7 +52,7 @@ async def create_calculation(
 @router.get("/list", response_model=SummaryListResponse)
 async def list_calculations(current_user=Depends(get_current_user)):
     rows = rest_get("tax_summaries", {
-        "user_id": f"eq.{current_user.id}",
+        "user_id": f"eq.{current_user["id"]}",
         "order": "created_at.desc",
         "select": "*",
     })
@@ -61,12 +61,12 @@ async def list_calculations(current_user=Depends(get_current_user)):
 
 @router.get("/{summary_id}", response_model=SummaryResponse)
 async def get_calculation(summary_id: int, current_user=Depends(get_current_user)):
-    s = _get_summary_or_404(summary_id, current_user.id)
+    s = _get_summary_or_404(summary_id, current_user["id"])
     return SummaryResponse.model_validate(s)
 
 
 @router.delete("/{summary_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_calculation(summary_id: int, current_user=Depends(get_current_user)):
-    _get_summary_or_404(summary_id, current_user.id)
+    _get_summary_or_404(summary_id, current_user["id"])
     rest_delete("tax_summaries", "id", summary_id)
     return None

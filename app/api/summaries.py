@@ -15,7 +15,7 @@ router = APIRouter()
 @router.get("/", response_model=SummaryListResponse)
 async def list_summaries(current_user=Depends(get_current_user)):
     rows = rest_get("tax_summaries", {
-        "user_id": f"eq.{current_user.id}",
+        "user_id": f"eq.{current_user["id"]}",
         "order": "created_at.desc",
         "select": "*",
     })
@@ -27,7 +27,7 @@ async def get_summary(summary_id: int, current_user=Depends(get_current_user)):
     rows = rest_get("tax_summaries", {"id": f"eq.{summary_id}", "select": "*"})
     if not rows:
         raise HTTPException(status_code=404, detail="Summary not found")
-    if rows[0]["user_id"] != current_user.id:
+    if rows[0]["user_id"] != current_user["id"]:
         raise HTTPException(status_code=404, detail="Summary not found")
     return SummaryResponse.model_validate(rows[0])
 
@@ -39,7 +39,7 @@ async def export_summary(summary_id: int, current_user=Depends(get_current_user)
         raise HTTPException(status_code=404, detail="Summary not found")
 
     s = rows[0]
-    if s["user_id"] != current_user.id:
+    if s["user_id"] != current_user["id"]:
         raise HTTPException(status_code=404, detail="Summary not found")
 
     effective_tax_rate = (
@@ -81,7 +81,7 @@ async def export_summary(summary_id: int, current_user=Depends(get_current_user)
 <div class="info-grid">
   <div class="info-item">
     <label>Account</label>
-    <span>{current_user.email}</span>
+    <span>{current_user["email"]}</span>
   </div>
   <div class="info-item">
     <label>Tax Year</label>

@@ -103,5 +103,5 @@ def rest_update(
 
 def fetch_user_by_email(email: str) -> dict[str, Any]:
     """Shortcut: fetch a single user row from public.users by email."""
-    rows = rest_get("users", {"email": f"eq.{email}", "select": "id,email,full_name,tier"})
+    rows = rest_get("users", {"email": f"eq.{email}", "select": "id,email,full_name,tier,created_at"})
     return rows[0] if rows else {}

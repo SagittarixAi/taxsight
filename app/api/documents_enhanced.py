@@ -38,7 +38,7 @@ async def upload_with_ai(
             detail=f"Unsupported file type: {ext}. Supported: {', '.join(allowed_types)}"
         )
 
-    safe_name = f"{datetime.utcnow().timestamp()}_{current_user.id}_{file.filename}"
+    safe_name = f"{datetime.utcnow().timestamp()}_{current_user["id"]}_{file.filename}"
     file_path = UPLOAD_DIR / safe_name
 
     try:
@@ -54,7 +54,7 @@ async def upload_with_ai(
         )
 
         rows = rest_insert("documents", {
-            "user_id": current_user.id,
+            "user_id": current_user["id"],
             "filename": file.filename,
             "storage_path": str(file_path),
             "document_type": result.document.document_type,
@@ -129,7 +129,7 @@ async def batch_upload_with_ai(
     results = []
     for file in files:
         ext = Path(file.filename).suffix.lower()
-        safe_name = f"{datetime.utcnow().timestamp()}_{current_user.id}_{file.filename}"
+        safe_name = f"{datetime.utcnow().timestamp()}_{current_user["id"]}_{file.filename}"
         file_path = UPLOAD_DIR / safe_name
 
         try:
@@ -144,7 +144,7 @@ async def batch_upload_with_ai(
             )
 
             rows = rest_insert("documents", {
-                "user_id": current_user.id,
+                "user_id": current_user["id"],
                 "filename": file.filename,
                 "storage_path": str(file_path),
                 "document_type": result.document.document_type,
@@ -200,7 +200,7 @@ async def get_extraction(
     """Get AI extraction results for a processed document."""
     rows = rest_get("documents", {
         "id": f"eq.{document_id}",
-        "user_id": f"eq.{current_user.id}",
+        "user_id": f"eq.{current_user["id"]}",
         "select": "*",
     })
     if not rows:
@@ -222,7 +222,7 @@ async def get_deductions_summary(
 ):
     """Aggregate all deductions found across user's documents."""
     docs = rest_get("documents", {
-        "user_id": f"eq.{current_user.id}",
+        "user_id": f"eq.{current_user["id"]}",
         "status": "eq.complete",
         "select": "*",
     })
