@@ -98,14 +98,11 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), request: Request = N
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user=Depends(get_current_user)):
     """Return the authenticated user's profile."""
-    user_data = fetch_user_by_email(current_user.email)
-    if not user_data:
-        raise HTTPException(status_code=404, detail="User not found")
-
+    # current_user already has the local record with integer id
     return UserResponse.model_validate({
-        "id": user_data["id"],
-        "email": current_user.email,
-        "full_name": user_data.get("full_name", ""),
-        "tier": user_data.get("tier", "free"),
-        "created_at": user_data.get("created_at"),
+        "id": current_user["id"],
+        "email": current_user["email"],
+        "full_name": current_user.get("full_name", ""),
+        "tier": current_user.get("tier", "free"),
+        "created_at": current_user.get("created_at"),
     })
