@@ -1,16 +1,12 @@
-"""Document upload and management API routes."""
+"""Document upload and management API routes — Supabase backend."""
 import os
 import uuid
 
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
-from sqlalchemy.orm import Session
 
 from app.core.config import settings
-from app.core.database import get_db
+from app.core.database import get_supabase
 from app.core.security import get_current_user
-from app.models.user import User
-from app.models.document import Document, DocumentStatus
-from app.models.extracted_data import ExtractedData
 from app.schemas.document import (
     DocumentDataResponse,
     DocumentResponse,
@@ -58,10 +54,10 @@ def _validate_and_read(file: UploadFile) -> bytes:
 @router.post("/upload", response_model=DocumentUploadResponse)
 async def upload_document(
     file: UploadFile = File(...),
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
+    current_user=Depends(get_current_user),
 ):
     content = _validate_and_read(file)
+    supabase = get_supabase()
 
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     ext = EXTENSION_MAP.get(file.content_type, ".bin")
@@ -76,81 +72,86 @@ async def upload_document(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    document = Document(
-        user_id=current_user.id,
-        filename=file.filename or unique_name,
-        file_path=file_path,
-        file_type=file.content_type,
-        status=DocumentStatus.EXTRACTED if extracted_text else DocumentStatus.PROCESSING,
-    )
-    db.add(document)
-    db.flush()
+    doc_data = {
+        "user_id": current_user.id,
+        "filename": file.filename or unique_name,
+        "file_path": file_path,
+        "file_type": file.content_type,
+        "status": "extracted" if extracted_text else "processing",
+    }
+
+    doc_result = supabase.table("documents").insert(doc_data).execute()
+    doc = doc_result.data[0]
 
     if extracted_text:
-        extracted = ExtractedData(
-            document_id=document.id,
-            field_name="raw_text",
-            field_value=extracted_text,
-            confidence=1.0,
-        )
-        db.add(extracted)
-
-    db.commit()
-    db.refresh(document)
+        supabase.table("extracted_data").insert({
+            "document_id": doc["id"],
+            "field_name": "raw_text",
+            "field_value": extracted_text,
+            "confidence": 1.0,
+        }).execute()
 
     return DocumentUploadResponse(
-        document_id=document.id,
-        filename=document.filename,
+        document_id=doc["id"],
+        filename=doc["filename"],
         extracted_text=extracted_text,
-        status=document.status.value,
+        status=doc["status"],
     )
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
-async def get_document(document_id: int, db: Session = Depends(get_db)):
-    document = db.query(Document).filter(Document.id == document_id).first()
-    if not document:
+async def get_document(document_id: int):
+    supabase = get_supabase()
+    doc_result = supabase.table("documents").select("*").eq("id", document_id).execute()
+
+    if not doc_result.data:
         raise HTTPException(status_code=404, detail="Document not found")
 
+    doc = doc_result.data[0]
+
+    extracted_result = supabase.table("extracted_data").select("*").eq("document_id", document_id).execute()
     extracted_fields = [
         ExtractedFieldResponse(
-            field_name=e.field_name,
-            field_value=e.field_value,
-            confidence=e.confidence,
+            field_name=e["field_name"],
+            field_value=e["field_value"],
+            confidence=e["confidence"],
         )
-        for e in document.extracted_data
+        for e in extracted_result.data
     ]
 
     return DocumentResponse(
-        id=document.id,
-        user_id=document.user_id,
-        filename=document.filename,
-        file_path=document.file_path,
-        file_type=document.file_type,
-        status=document.status.value,
-        created_at=document.created_at,
-        updated_at=document.updated_at,
+        id=doc["id"],
+        user_id=doc["user_id"],
+        filename=doc["filename"],
+        file_path=doc["file_path"],
+        file_type=doc["file_type"],
+        status=doc["status"],
+        created_at=doc.get("created_at"),
+        updated_at=doc.get("updated_at"),
         extracted_fields=extracted_fields,
     )
 
 
 @router.get("/{document_id}/data", response_model=DocumentDataResponse)
-async def get_document_data(document_id: int, db: Session = Depends(get_db)):
-    document = db.query(Document).filter(Document.id == document_id).first()
-    if not document:
+async def get_document_data(document_id: int):
+    supabase = get_supabase()
+    doc_result = supabase.table("documents").select("*").eq("id", document_id).execute()
+
+    if not doc_result.data:
         raise HTTPException(status_code=404, detail="Document not found")
 
+    extracted_result = supabase.table("extracted_data").select("*").eq("document_id", document_id).execute()
     extracted_fields = [
         ExtractedFieldResponse(
-            field_name=e.field_name,
-            field_value=e.field_value,
-            confidence=e.confidence,
+            field_name=e["field_name"],
+            field_value=e["field_value"],
+            confidence=e["confidence"],
         )
-        for e in document.extracted_data
+        for e in extracted_result.data
     ]
 
     return DocumentDataResponse(
-        document_id=document.id,
-        status=document.status.value,
+        document_id=doc_result.data[0]["id"],
+        status=doc_result.data[0]["status"],
         extracted_fields=extracted_fields,
     )

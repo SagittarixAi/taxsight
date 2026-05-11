@@ -1,63 +1,58 @@
-"""Tax summary API routes."""
+"""Tax summary API routes — Supabase backend."""
 from datetime import datetime, timezone
 
-from fastapi import APIRouter, Depends, HTTPException, status
+from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import Response
-from sqlalchemy.orm import Session
 from weasyprint import HTML
 
-from app.core.database import get_db
+from app.core.database import get_supabase
 from app.core.security import get_current_user
-from app.models.tax_summary import TaxSummary
-from app.models.user import User
 from app.schemas.calculation import SummaryListResponse, SummaryResponse
 
 router = APIRouter()
 
 
 @router.get("/", response_model=SummaryListResponse)
-async def list_summaries(
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    summaries = (
-        db.query(TaxSummary)
-        .filter(TaxSummary.user_id == current_user.id)
-        .order_by(TaxSummary.created_at.desc())
-        .all()
+async def list_summaries(current_user=Depends(get_current_user)):
+    supabase = get_supabase()
+    result = (
+        supabase.table("tax_summaries")
+        .select("*")
+        .eq("user_id", current_user.id)
+        .order("created_at", desc=True)
+        .execute()
     )
-    return SummaryListResponse(summaries=summaries, total=len(summaries))
+    return SummaryListResponse(summaries=result.data, total=len(result.data))
 
 
 @router.get("/{summary_id}", response_model=SummaryResponse)
-async def get_summary(
-    summary_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    summary = db.query(TaxSummary).filter(TaxSummary.id == summary_id).first()
-    if not summary:
+async def get_summary(summary_id: int, current_user=Depends(get_current_user)):
+    supabase = get_supabase()
+    result = supabase.table("tax_summaries").select("*").eq("id", summary_id).execute()
+
+    if not result.data:
         raise HTTPException(status_code=404, detail="Summary not found")
-    if summary.user_id != current_user.id:
+    if result.data[0]["user_id"] != current_user.id:
         raise HTTPException(status_code=404, detail="Summary not found")
-    return summary
+
+    return SummaryResponse.model_validate(result.data[0])
 
 
 @router.get("/{summary_id}/export")
-async def export_summary(
-    summary_id: int,
-    current_user: User = Depends(get_current_user),
-    db: Session = Depends(get_db),
-):
-    summary = db.query(TaxSummary).filter(TaxSummary.id == summary_id).first()
-    if not summary:
+async def export_summary(summary_id: int, current_user=Depends(get_current_user)):
+    supabase = get_supabase()
+    result = supabase.table("tax_summaries").select("*").eq("id", summary_id).execute()
+
+    if not result.data:
         raise HTTPException(status_code=404, detail="Summary not found")
-    if summary.user_id != current_user.id:
+
+    summary = result.data[0]
+    if summary["user_id"] != current_user.id:
         raise HTTPException(status_code=404, detail="Summary not found")
 
     effective_tax_rate = (
-        round(summary.estimated_tax / summary.gross_income * 100, 2)
-        if summary.gross_income > 0
+        round(summary["estimated_tax"] / summary["gross_income"] * 100, 2)
+        if summary["gross_income"] > 0
         else 0.0
     )
 
@@ -98,11 +93,11 @@ async def export_summary(
   </div>
   <div class="info-item">
     <label>Tax Year</label>
-    <span>{summary.tax_year}</span>
+    <span>{summary['tax_year']}</span>
   </div>
   <div class="info-item">
     <label>Filing Status</label>
-    <span>{summary.status}</span>
+    <span>{summary['status']}</span>
   </div>
   <div class="info-item">
     <label>Date Generated</label>
@@ -120,19 +115,19 @@ async def export_summary(
   <tbody>
     <tr>
       <td>Gross Income</td>
-      <td>${summary.gross_income:,.2f}</td>
+      <td>${summary['gross_income']:,.2f}</td>
     </tr>
     <tr>
       <td>Total Deductions</td>
-      <td>${summary.total_deductions:,.2f}</td>
+      <td>${summary['total_deductions']:,.2f}</td>
     </tr>
     <tr>
       <td>Estimated Tax</td>
-      <td>${summary.estimated_tax:,.2f}</td>
+      <td>${summary['estimated_tax']:,.2f}</td>
     </tr>
     <tr>
       <td>Estimated Refund</td>
-      <td>${summary.estimated_refund:,.2f}</td>
+      <td>${summary['estimated_refund']:,.2f}</td>
     </tr>
     <tr>
       <td>Effective Tax Rate</td>

@@ -1,21 +1,19 @@
-"""Database connection and session management."""
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker, DeclarativeBase
+"""Supabase database client — replaces SQLAlchemy."""
+from supabase import create_client, Client
 from app.core.config import settings
 
-engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+_supabase: Client | None = None
 
 
-class Base(DeclarativeBase):
-    """Base class for all database models."""
-    pass
-
-
-def get_db():
-    """FastAPI dependency: yields a database session."""
-    db = SessionLocal()
-    try:
-        yield db
-    finally:
-        db.close()
+def get_supabase() -> Client:
+    """Return a singleton Supabase client (service_role for backend access)."""
+    global _supabase
+    if _supabase is None:
+        if not settings.SUPABASE_URL or not settings.SUPABASE_SERVICE_KEY:
+            raise RuntimeError(
+                "SUPABASE_URL and SUPABASE_SERVICE_KEY must be set"
+            )
+        _supabase = create_client(
+            settings.SUPABASE_URL, settings.SUPABASE_SERVICE_KEY
+        )
+    return _supabase

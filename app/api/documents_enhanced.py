@@ -9,11 +9,9 @@ from typing import List
 from datetime import datetime
 
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Form
-from sqlalchemy.orm import Session
 
 from app.api.auth import get_current_user
-from app.core.database import get_db
-from app.models import Document, User
+from app.core.database import get_supabase
 from app.services.document_processor import DocumentProcessor
 
 logger = logging.getLogger(__name__)
@@ -29,8 +27,7 @@ async def upload_with_ai(
     file: UploadFile = File(...),
     filing_status: str = Form("single"),
     gross_income: float = Form(0.0),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     """Upload a document, run AI extraction, and return analysis results."""
     # Validate file type
@@ -59,16 +56,17 @@ async def upload_with_ai(
             filing_status=filing_status,
         )
 
-        # Save document metadata to database
-        db_document = Document(
-            user_id=current_user.id,
-            filename=file.filename,
-            storage_path=str(file_path),
-            document_type=result.document.document_type,
-            document_subtype=result.document.document_subtype,
-            file_size=len(content),
-            status="complete" if not result.document.error else "error",
-            extracted_data=json.dumps({
+        # Save document metadata to Supabase
+        supabase = get_supabase()
+        doc_data = {
+            "user_id": current_user.id,
+            "filename": file.filename,
+            "storage_path": str(file_path),
+            "document_type": result.document.document_type,
+            "document_subtype": result.document.document_subtype,
+            "file_size": len(content),
+            "status": "complete" if not result.document.error else "error",
+            "extracted_data": json.dumps({
                 "fields": [
                     {"name": f.name, "value": f.value, "confidence": f.confidence}
                     for f in result.document.fields
@@ -85,15 +83,13 @@ async def upload_with_ai(
                 "extraction_method": result.document.extraction_method,
                 "tax_year": result.document.tax_year,
             }),
-            processing_error=result.document.error,
-            created_at=datetime.utcnow(),
-        )
-        db.add(db_document)
-        db.commit()
-        db.refresh(db_document)
+            "processing_error": result.document.error,
+        }
+        doc_result = supabase.table("documents").insert(doc_data).execute()
+        doc_id = doc_result.data[0]["id"]
 
         return {
-            "id": db_document.id,
+            "id": doc_id,
             "filename": file.filename,
             "document_type": result.document.document_type,
             "document_subtype": result.document.document_subtype,
@@ -134,8 +130,7 @@ async def batch_upload_with_ai(
     files: List[UploadFile] = File(...),
     filing_status: str = Form("single"),
     gross_income: float = Form(0.0),
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     """Upload multiple documents and process with AI pipeline."""
     results = []
@@ -156,15 +151,16 @@ async def batch_upload_with_ai(
                 filing_status=filing_status,
             )
 
-            db_document = Document(
-                user_id=current_user.id,
-                filename=file.filename,
-                storage_path=str(file_path),
-                document_type=result.document.document_type,
-                document_subtype=result.document.document_subtype,
-                file_size=len(content),
-                status="complete" if not result.document.error else "error",
-                extracted_data=json.dumps({
+            supabase = get_supabase()
+            doc_data = {
+                "user_id": current_user.id,
+                "filename": file.filename,
+                "storage_path": str(file_path),
+                "document_type": result.document.document_type,
+                "document_subtype": result.document.document_subtype,
+                "file_size": len(content),
+                "status": "complete" if not result.document.error else "error",
+                "extracted_data": json.dumps({
                     "fields": [
                         {"name": f.name, "value": f.value, "confidence": f.confidence}
                         for f in result.document.fields
@@ -179,14 +175,13 @@ async def batch_upload_with_ai(
                         for d in result.deductions
                     ],
                 }),
-                processing_error=result.document.error,
-                created_at=datetime.utcnow(),
-            )
-            db.add(db_document)
-            db.commit()
+                "processing_error": result.document.error,
+            }
+            doc_result = supabase.table("documents").insert(doc_data).execute()
+            doc_id = doc_result.data[0]["id"]
 
             results.append({
-                "id": db_document.id,
+                "id": doc_id,
                 "filename": file.filename,
                 "document_type": result.document.document_type,
                 "status": "complete" if not result.document.error else "error",
@@ -213,51 +208,46 @@ async def batch_upload_with_ai(
 @router.get("/extraction/{document_id}")
 async def get_extraction(
     document_id: int,
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     """Get AI extraction results for a processed document."""
-    doc = db.query(Document).filter(
-        Document.id == document_id,
-        Document.user_id == current_user.id,
-    ).first()
-    if not doc:
+    supabase = get_supabase()
+    doc_result = supabase.table("documents").select("*").eq("id", document_id).eq("user_id", current_user.id).execute()
+    if not doc_result.data:
         raise HTTPException(status_code=404, detail="Document not found")
+    doc = doc_result.data[0]
     return {
-        "id": doc.id,
-        "filename": doc.filename,
-        "document_type": doc.document_type,
-        "extracted_data": json.loads(doc.extracted_data or "{}"),
-        "status": doc.status,
+        "id": doc["id"],
+        "filename": doc["filename"],
+        "document_type": doc["document_type"],
+        "extracted_data": json.loads(doc.get("extracted_data") or "{}"),
+        "status": doc["status"],
     }
 
 
 @router.get("/deductions/summary")
 async def get_deductions_summary(
-    db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_user),
+    current_user=Depends(get_current_user),
 ):
     """Aggregate all deductions found across user's documents."""
-    docs = db.query(Document).filter(
-        Document.user_id == current_user.id,
-        Document.status == "complete",
-        Document.document_type != "unknown",
-    ).all()
+    supabase = get_supabase()
+    docs_result = supabase.table("documents").select("*").eq("user_id", current_user.id).eq("status", "complete").neq("document_type", "unknown").execute()
+    docs = docs_result.data
 
     all_deductions = []
     total_estimate = 0.0
     by_category = {}
 
     for doc in docs:
-        if not doc.extracted_data:
+        if not doc.get("extracted_data"):
             continue
         try:
-            data = json.loads(doc.extracted_data)
+            data = json.loads(doc["extracted_data"])
             for d in data.get("deductions", []):
                 all_deductions.append({
                     **d,
-                    "document_id": doc.id,
-                    "filename": doc.filename,
+                    "document_id": doc["id"],
+                    "filename": doc["filename"],
                 })
                 total_estimate += d["estimated_amount"]
                 cat = d["category"]

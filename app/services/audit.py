@@ -1,10 +1,8 @@
-"""Audit logging utilities."""
+"""Audit logging utilities — Supabase backend."""
 from datetime import datetime, timezone
 from fastapi import Request
-from sqlalchemy.orm import Session
 
-from app.models.audit_log import AuditLog
-from app.core.database import SessionLocal
+from app.core.database import get_supabase
 
 
 def log_action(
@@ -15,22 +13,21 @@ def log_action(
     details: dict | None = None,
     ip_address: str | None = None,
 ) -> None:
-    """Record an auditable action to the database."""
-    log = AuditLog(
-        user_id=user_id,
-        action=action,
-        resource_type=resource_type,
-        resource_id=resource_id,
-        details=details,
-        ip_address=ip_address,
-        created_at=datetime.now(timezone.utc),
-    )
-    db = SessionLocal()
+    """Record an auditable action to Supabase."""
+    supabase = get_supabase()
+    log_entry = {
+        "user_id": user_id,
+        "action": action,
+        "resource_type": resource_type,
+        "resource_id": resource_id,
+        "details": details,
+        "ip_address": ip_address,
+        "created_at": datetime.now(timezone.utc).isoformat(),
+    }
     try:
-        db.add(log)
-        db.commit()
-    finally:
-        db.close()
+        supabase.table("audit_logs").insert(log_entry).execute()
+    except Exception:
+        pass  # audit failures should never break the main flow
 
 
 def get_client_ip(request: Request) -> str | None:
