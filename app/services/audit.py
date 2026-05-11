@@ -1,8 +1,6 @@
-"""Audit logging utilities — Supabase backend."""
-from datetime import datetime, timezone
+"""Audit logging utilities — Supabase REST backend."""
 from fastapi import Request
-
-from app.core.database import get_supabase
+from app.core.database import rest_insert
 
 
 def log_action(
@@ -14,18 +12,15 @@ def log_action(
     ip_address: str | None = None,
 ) -> None:
     """Record an auditable action to Supabase."""
-    supabase = get_supabase()
-    log_entry = {
-        "user_id": user_id,
-        "action": action,
-        "resource_type": resource_type,
-        "resource_id": resource_id,
-        "details": details,
-        "ip_address": ip_address,
-        "created_at": datetime.now(timezone.utc).isoformat(),
-    }
     try:
-        supabase.table("audit_logs").insert(log_entry).execute()
+        rest_insert("audit_logs", {
+            "user_id": user_id,
+            "action": action,
+            "resource_type": resource_type,
+            "resource_id": resource_id,
+            "details": details,
+            "ip_address": ip_address,
+        })
     except Exception:
         pass  # audit failures should never break the main flow
 

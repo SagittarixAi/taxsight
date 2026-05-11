@@ -1,11 +1,11 @@
-"""Document upload and management API routes — Supabase backend."""
+"""Document upload and management API routes — Supabase REST backend."""
 import os
 import uuid
 
 from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
 
 from app.core.config import settings
-from app.core.database import get_supabase
+from app.core.database import rest_get, rest_insert
 from app.core.security import get_current_user
 from app.schemas.document import (
     DocumentDataResponse,
@@ -57,7 +57,6 @@ async def upload_document(
     current_user=Depends(get_current_user),
 ):
     content = _validate_and_read(file)
-    supabase = get_supabase()
 
     os.makedirs(settings.UPLOAD_DIR, exist_ok=True)
     ext = EXTENSION_MAP.get(file.content_type, ".bin")
@@ -72,51 +71,50 @@ async def upload_document(
     except ValueError as exc:
         raise HTTPException(status_code=400, detail=str(exc))
 
-    doc_data = {
+    rows = rest_insert("documents", {
         "user_id": current_user.id,
         "filename": file.filename or unique_name,
         "file_path": file_path,
         "file_type": file.content_type,
         "status": "extracted" if extracted_text else "processing",
-    }
+    })
+    doc = rows[0] if rows else {}
 
-    doc_result = supabase.table("documents").insert(doc_data).execute()
-    doc = doc_result.data[0]
-
-    if extracted_text:
-        supabase.table("extracted_data").insert({
+    if extracted_text and doc.get("id"):
+        rest_insert("extracted_data", {
             "document_id": doc["id"],
             "field_name": "raw_text",
             "field_value": extracted_text,
             "confidence": 1.0,
-        }).execute()
+        })
 
     return DocumentUploadResponse(
-        document_id=doc["id"],
-        filename=doc["filename"],
+        document_id=doc.get("id"),
+        filename=doc.get("filename", file.filename),
         extracted_text=extracted_text,
-        status=doc["status"],
+        status=doc.get("status", "processing"),
     )
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
 async def get_document(document_id: int):
-    supabase = get_supabase()
-    doc_result = supabase.table("documents").select("*").eq("id", document_id).execute()
-
-    if not doc_result.data:
+    rows = rest_get("documents", {"id": f"eq.{document_id}", "select": "*"})
+    if not rows:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    doc = doc_result.data[0]
+    doc = rows[0]
+    extracted_rows = rest_get("extracted_data", {
+        "document_id": f"eq.{document_id}",
+        "select": "field_name,field_value,confidence",
+    })
 
-    extracted_result = supabase.table("extracted_data").select("*").eq("document_id", document_id).execute()
     extracted_fields = [
         ExtractedFieldResponse(
             field_name=e["field_name"],
             field_value=e["field_value"],
             confidence=e["confidence"],
         )
-        for e in extracted_result.data
+        for e in extracted_rows
     ]
 
     return DocumentResponse(
@@ -134,24 +132,26 @@ async def get_document(document_id: int):
 
 @router.get("/{document_id}/data", response_model=DocumentDataResponse)
 async def get_document_data(document_id: int):
-    supabase = get_supabase()
-    doc_result = supabase.table("documents").select("*").eq("id", document_id).execute()
-
-    if not doc_result.data:
+    rows = rest_get("documents", {"id": f"eq.{document_id}", "select": "id,status"})
+    if not rows:
         raise HTTPException(status_code=404, detail="Document not found")
 
-    extracted_result = supabase.table("extracted_data").select("*").eq("document_id", document_id).execute()
+    extracted_rows = rest_get("extracted_data", {
+        "document_id": f"eq.{document_id}",
+        "select": "field_name,field_value,confidence",
+    })
+
     extracted_fields = [
         ExtractedFieldResponse(
             field_name=e["field_name"],
             field_value=e["field_value"],
             confidence=e["confidence"],
         )
-        for e in extracted_result.data
+        for e in extracted_rows
     ]
 
     return DocumentDataResponse(
-        document_id=doc_result.data[0]["id"],
-        status=doc_result.data[0]["status"],
+        document_id=rows[0]["id"],
+        status=rows[0]["status"],
         extracted_fields=extracted_fields,
     )

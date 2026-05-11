@@ -11,7 +11,7 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, File, UploadFile, HTTPException, Form
 
 from app.api.auth import get_current_user
-from app.core.database import get_supabase
+from app.core.database import rest_get, rest_insert
 from app.services.document_processor import DocumentProcessor
 
 logger = logging.getLogger(__name__)
@@ -30,7 +30,6 @@ async def upload_with_ai(
     current_user=Depends(get_current_user),
 ):
     """Upload a document, run AI extraction, and return analysis results."""
-    # Validate file type
     allowed_types = {".pdf", ".png", ".jpg", ".jpeg", ".tiff"}
     ext = Path(file.filename).suffix.lower()
     if ext not in allowed_types:
@@ -39,7 +38,6 @@ async def upload_with_ai(
             detail=f"Unsupported file type: {ext}. Supported: {', '.join(allowed_types)}"
         )
 
-    # Save file temporarily
     safe_name = f"{datetime.utcnow().timestamp()}_{current_user.id}_{file.filename}"
     file_path = UPLOAD_DIR / safe_name
 
@@ -48,7 +46,6 @@ async def upload_with_ai(
         file_path.write_bytes(content)
         logger.info(f"Saved upload: {file_path} ({len(content)} bytes)")
 
-        # Run AI processing pipeline
         result = DocumentProcessor.process(
             file_path=str(file_path),
             filename=file.filename,
@@ -56,9 +53,7 @@ async def upload_with_ai(
             filing_status=filing_status,
         )
 
-        # Save document metadata to Supabase
-        supabase = get_supabase()
-        doc_data = {
+        rows = rest_insert("documents", {
             "user_id": current_user.id,
             "filename": file.filename,
             "storage_path": str(file_path),
@@ -84,9 +79,8 @@ async def upload_with_ai(
                 "tax_year": result.document.tax_year,
             }),
             "processing_error": result.document.error,
-        }
-        doc_result = supabase.table("documents").insert(doc_data).execute()
-        doc_id = doc_result.data[0]["id"]
+        })
+        doc_id = rows[0]["id"] if rows else None
 
         return {
             "id": doc_id,
@@ -120,7 +114,6 @@ async def upload_with_ai(
         logger.exception(f"Upload processing failed for {file.filename}")
         raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
     finally:
-        # Clean up temp file after processing
         if file_path.exists():
             file_path.unlink()
 
@@ -135,7 +128,6 @@ async def batch_upload_with_ai(
     """Upload multiple documents and process with AI pipeline."""
     results = []
     for file in files:
-        # Reuse the single upload logic
         ext = Path(file.filename).suffix.lower()
         safe_name = f"{datetime.utcnow().timestamp()}_{current_user.id}_{file.filename}"
         file_path = UPLOAD_DIR / safe_name
@@ -151,8 +143,7 @@ async def batch_upload_with_ai(
                 filing_status=filing_status,
             )
 
-            supabase = get_supabase()
-            doc_data = {
+            rows = rest_insert("documents", {
                 "user_id": current_user.id,
                 "filename": file.filename,
                 "storage_path": str(file_path),
@@ -176,9 +167,8 @@ async def batch_upload_with_ai(
                     ],
                 }),
                 "processing_error": result.document.error,
-            }
-            doc_result = supabase.table("documents").insert(doc_data).execute()
-            doc_id = doc_result.data[0]["id"]
+            })
+            doc_id = rows[0]["id"] if rows else None
 
             results.append({
                 "id": doc_id,
@@ -199,10 +189,7 @@ async def batch_upload_with_ai(
             if file_path.exists():
                 file_path.unlink()
 
-    return {
-        "processed": len(results),
-        "results": results,
-    }
+    return {"processed": len(results), "results": results}
 
 
 @router.get("/extraction/{document_id}")
@@ -211,11 +198,15 @@ async def get_extraction(
     current_user=Depends(get_current_user),
 ):
     """Get AI extraction results for a processed document."""
-    supabase = get_supabase()
-    doc_result = supabase.table("documents").select("*").eq("id", document_id).eq("user_id", current_user.id).execute()
-    if not doc_result.data:
+    rows = rest_get("documents", {
+        "id": f"eq.{document_id}",
+        "user_id": f"eq.{current_user.id}",
+        "select": "*",
+    })
+    if not rows:
         raise HTTPException(status_code=404, detail="Document not found")
-    doc = doc_result.data[0]
+
+    doc = rows[0]
     return {
         "id": doc["id"],
         "filename": doc["filename"],
@@ -230,9 +221,11 @@ async def get_deductions_summary(
     current_user=Depends(get_current_user),
 ):
     """Aggregate all deductions found across user's documents."""
-    supabase = get_supabase()
-    docs_result = supabase.table("documents").select("*").eq("user_id", current_user.id).eq("status", "complete").neq("document_type", "unknown").execute()
-    docs = docs_result.data
+    docs = rest_get("documents", {
+        "user_id": f"eq.{current_user.id}",
+        "status": "eq.complete",
+        "select": "*",
+    })
 
     all_deductions = []
     total_estimate = 0.0
@@ -252,7 +245,6 @@ async def get_deductions_summary(
                 total_estimate += d["estimated_amount"]
                 cat = d["category"]
                 by_category[cat] = by_category.get(cat, 0) + d["estimated_amount"]
-            data.get("total_deductions")
         except (json.JSONDecodeError, KeyError):
             continue
 

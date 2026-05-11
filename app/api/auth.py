@@ -1,37 +1,14 @@
 """Authentication API endpoints — Supabase Auth backend."""
-import httpx
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 
-from app.core.database import get_supabase
+from app.core.database import get_supabase, rest_insert, fetch_user_by_email
 from app.core.security import get_current_user
 from app.schemas.auth import UserCreate, UserResponse
 from app.services.audit import log_action, get_client_ip
 
 router = APIRouter()
-
-
-def _service_headers(supabase):
-    """Headers for service_role REST API calls (bypasses RLS)."""
-    return {
-        "apikey": supabase.supabase_key,
-        "Authorization": f"Bearer {supabase.supabase_key}",
-        "Content-Type": "application/json",
-    }
-
-
-def _fetch_user(supabase, email: str) -> dict:
-    """Fetch a user record from public.users by email via service_role."""
-    headers = _service_headers(supabase)
-    resp = httpx.get(
-        f"{supabase.supabase_url}/rest/v1/users",
-        params={"email": f"eq.{email}", "select": "id,email,full_name,tier"},
-        headers=headers,
-    )
-    if resp.status_code == 200 and resp.json():
-        return resp.json()[0]
-    return {}
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -51,22 +28,13 @@ def register(payload: UserCreate, request: Request):
     auth_user = auth_response.user
     auth_id = auth_user.id
 
-    # Insert into public.users using raw REST (service_role bypasses RLS)
-    headers = _service_headers(supabase)
-    headers["Prefer"] = "return=representation"
-
-    insert_resp = httpx.post(
-        f"{supabase.supabase_url}/rest/v1/users",
-        json={
-            "email": auth_user.email,
-            "full_name": payload.full_name,
-            "tier": "free",
-            "auth_id": auth_id,
-        },
-        headers=headers,
-    )
-    insert_resp.raise_for_status()
-    user_data = insert_resp.json()[0] if insert_resp.json() else {}
+    rows = rest_insert("users", {
+        "email": auth_user.email,
+        "full_name": payload.full_name,
+        "tier": "free",
+        "auth_id": auth_id,
+    })
+    user_data = rows[0] if rows else {}
 
     log_action(
         user_id=auth_id,
@@ -105,7 +73,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), request: Request = N
         )
 
     auth_user = auth_response.user
-    user_data = _fetch_user(supabase, auth_user.email)
+    user_data = fetch_user_by_email(auth_user.email)
 
     log_action(
         user_id=auth_user.id,
@@ -130,8 +98,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), request: Request = N
 @router.get("/me", response_model=UserResponse)
 def get_me(current_user=Depends(get_current_user)):
     """Return the authenticated user's profile."""
-    supabase = get_supabase()
-    user_data = _fetch_user(supabase, current_user.email)
+    user_data = fetch_user_by_email(current_user.email)
     if not user_data:
         raise HTTPException(status_code=404, detail="User not found")
 
