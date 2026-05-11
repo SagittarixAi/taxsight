@@ -1,4 +1,6 @@
 """Authentication API endpoints — Supabase Auth backend."""
+import httpx
+
 from fastapi import APIRouter, Depends, HTTPException, Request, status
 from fastapi.security import OAuth2PasswordRequestForm
 
@@ -8,6 +10,28 @@ from app.schemas.auth import UserCreate, UserResponse
 from app.services.audit import log_action, get_client_ip
 
 router = APIRouter()
+
+
+def _service_headers(supabase):
+    """Headers for service_role REST API calls (bypasses RLS)."""
+    return {
+        "apikey": supabase.supabase_key,
+        "Authorization": f"Bearer {supabase.supabase_key}",
+        "Content-Type": "application/json",
+    }
+
+
+def _fetch_user(supabase, email: str) -> dict:
+    """Fetch a user record from public.users by email via service_role."""
+    headers = _service_headers(supabase)
+    resp = httpx.get(
+        f"{supabase.supabase_url}/rest/v1/users",
+        params={"email": f"eq.{email}", "select": "id,email,full_name,tier"},
+        headers=headers,
+    )
+    if resp.status_code == 200 and resp.json():
+        return resp.json()[0]
+    return {}
 
 
 @router.post("/register", status_code=status.HTTP_201_CREATED)
@@ -25,15 +49,24 @@ def register(payload: UserCreate, request: Request):
         )
 
     auth_user = auth_response.user
-    auth_id = auth_user.id  # UUID from Supabase Auth
+    auth_id = auth_user.id
 
-    # Insert into our public.users table with auth_id linkage
-    user_result = supabase.table("users").insert({
-        "email": auth_user.email,
-        "full_name": payload.full_name,
-        "tier": "free",
-        "auth_id": auth_id,
-    }).execute()
+    # Insert into public.users using raw REST (service_role bypasses RLS)
+    headers = _service_headers(supabase)
+    headers["Prefer"] = "return=representation"
+
+    insert_resp = httpx.post(
+        f"{supabase.supabase_url}/rest/v1/users",
+        json={
+            "email": auth_user.email,
+            "full_name": payload.full_name,
+            "tier": "free",
+            "auth_id": auth_id,
+        },
+        headers=headers,
+    )
+    insert_resp.raise_for_status()
+    user_data = insert_resp.json()[0] if insert_resp.json() else {}
 
     log_action(
         user_id=auth_id,
@@ -43,7 +76,6 @@ def register(payload: UserCreate, request: Request):
         ip_address=get_client_ip(request),
     )
 
-    user_data = user_result.data[0] if user_result.data else {}
     access_token = auth_response.session.access_token if auth_response.session else None
 
     return {
@@ -73,10 +105,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), request: Request = N
         )
 
     auth_user = auth_response.user
-
-    # Query by email (already confirmed via auth) instead of auth_id UUID
-    user_result = supabase.table("users").select("*").eq("email", auth_user.email).execute()
-    user_data = user_result.data[0] if user_result.data else {}
+    user_data = _fetch_user(supabase, auth_user.email)
 
     log_action(
         user_id=auth_user.id,
@@ -102,14 +131,10 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), request: Request = N
 def get_me(current_user=Depends(get_current_user)):
     """Return the authenticated user's profile."""
     supabase = get_supabase()
-    # current_user comes from Supabase Auth JWT validation
-    email = current_user.email
-
-    user_result = supabase.table("users").select("*").eq("email", email).execute()
-    if not user_result.data:
+    user_data = _fetch_user(supabase, current_user.email)
+    if not user_data:
         raise HTTPException(status_code=404, detail="User not found")
 
-    user_data = user_result.data[0]
     return UserResponse.model_validate({
         "id": user_data["id"],
         "email": current_user.email,
