@@ -28,7 +28,6 @@ def register(payload: UserCreate, request: Request):
     auth_id = auth_user.id  # UUID from Supabase Auth
 
     # Insert into our public.users table with auth_id linkage
-    # Our users.id stays integer, auto-incremented
     user_result = supabase.table("users").insert({
         "email": auth_user.email,
         "full_name": payload.full_name,
@@ -74,17 +73,16 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), request: Request = N
         )
 
     auth_user = auth_response.user
-    auth_id = auth_user.id
 
-    # Fetch our user record by auth_id
-    user_result = supabase.table("users").select("*").eq("auth_id", auth_id).execute()
+    # Query by email (already confirmed via auth) instead of auth_id UUID
+    user_result = supabase.table("users").select("*").eq("email", auth_user.email).execute()
     user_data = user_result.data[0] if user_result.data else {}
 
     log_action(
-        user_id=auth_id,
+        user_id=auth_user.id,
         action="user.login",
         resource_type="user",
-        resource_id=str(auth_id),
+        resource_id=str(auth_user.id),
         ip_address=get_client_ip(request) if request else None,
     )
 
@@ -104,9 +102,10 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), request: Request = N
 def get_me(current_user=Depends(get_current_user)):
     """Return the authenticated user's profile."""
     supabase = get_supabase()
-    auth_id = current_user.id  # UUID from Supabase Auth
+    # current_user comes from Supabase Auth JWT validation
+    email = current_user.email
 
-    user_result = supabase.table("users").select("*").eq("auth_id", auth_id).execute()
+    user_result = supabase.table("users").select("*").eq("email", email).execute()
     if not user_result.data:
         raise HTTPException(status_code=404, detail="User not found")
 
