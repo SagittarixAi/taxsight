@@ -13,6 +13,13 @@ router = APIRouter()
 @router.post("/register", status_code=status.HTTP_201_CREATED)
 def register(payload: UserCreate, request: Request):
     """Register a new user via Supabase Auth."""
+    # Server-side password validation (belt-and-suspenders with Pydantic schema)
+    if len(payload.password) < 8:
+        raise HTTPException(
+            status_code=status.HTTP_422_UNPROCESSABLE_ENTITY,
+            detail="Password must be at least 8 characters",
+        )
+
     supabase = get_supabase()
     try:
         auth_response = supabase.auth.sign_up(
