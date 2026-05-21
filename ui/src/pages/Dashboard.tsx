@@ -35,7 +35,7 @@ export default function Dashboard() {
       navigate('/login')
       return
     }
-    api.get('/calculations/')
+    api.get('/calculations/list')
       .then((res) => {
         setCalculations(res.data)
         setHasData(res.data.length > 0)

@@ -1,8 +1,9 @@
 """Document upload and management API routes — Supabase REST backend."""
 import os
 import uuid
+from typing import List
 
-from fastapi import APIRouter, UploadFile, File, Depends, HTTPException
+from fastapi import APIRouter, UploadFile, File, Depends, HTTPException, status
 
 from app.core.config import settings
 from app.core.database import rest_get, rest_insert
@@ -94,6 +95,62 @@ async def upload_document(
         extracted_text=extracted_text,
         status=doc.get("status", "processing"),
     )
+
+
+@router.get("/", response_model=List[DocumentResponse])
+async def list_documents(current_user=Depends(get_current_user)):
+    """List all documents for the authenticated user."""
+    rows = rest_get("documents", {"user_id": f"eq.{current_user['id']}", "select": "*", "order": "created_at.desc"})
+    if not rows:
+        return []
+
+    results = []
+    for doc in rows:
+        extracted_rows = rest_get("extracted_data", {
+            "document_id": f"eq.{doc['id']}",
+            "select": "field_name,field_value,confidence",
+        })
+        extracted_fields = [
+            ExtractedFieldResponse(
+                field_name=e["field_name"],
+                field_value=e["field_value"],
+                confidence=e["confidence"],
+            )
+            for e in extracted_rows
+        ]
+        results.append(DocumentResponse(
+            id=doc["id"],
+            user_id=doc["user_id"],
+            filename=doc["filename"],
+            file_path=doc["file_path"],
+            file_type=doc["file_type"],
+            status=doc["status"],
+            created_at=doc.get("created_at"),
+            updated_at=doc.get("updated_at"),
+            extracted_fields=extracted_fields,
+        ))
+    return results
+
+
+@router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_document(document_id: int, current_user=Depends(get_current_user)):
+    """Delete a document by ID (scoped to current user)."""
+    rows = rest_get("documents", {"id": f"eq.{document_id}", "select": "id,user_id,file_path"})
+    if not rows:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    doc = rows[0]
+    if doc["user_id"] != current_user["id"]:
+        raise HTTPException(status_code=403, detail="Not authorized to delete this document")
+
+    # Delete file from disk
+    file_path = doc.get("file_path")
+    if file_path and os.path.exists(file_path):
+        os.remove(file_path)
+
+    from app.core.database import rest_delete
+    rest_delete("extracted_data", {"document_id": f"eq.{document_id}"})
+    rest_delete("documents", {"id": f"eq.{document_id}"})
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)

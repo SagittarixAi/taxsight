@@ -32,7 +32,7 @@ export default function Calculations() {
       navigate('/login')
       return
     }
-    api.get('/calculations/')
+    api.get('/calculations/list')
       .then((res) => {
         const data = Array.isArray(res.data) ? res.data : [res.data]
         setCalculations(data)
