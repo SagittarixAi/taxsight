@@ -18,10 +18,10 @@ def register(payload: UserCreate, request: Request):
         auth_response = supabase.auth.sign_up(
             {"email": payload.email, "password": payload.password}
         )
-    except Exception as e:
+    except Exception:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+            detail="Registration failed. Please check your information and try again.",
         )
 
     auth_user = auth_response.user

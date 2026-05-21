@@ -22,6 +22,16 @@ UPLOAD_DIR = Path(os.environ.get("UPLOAD_DIR", "/tmp/taxsight-uploads"))
 UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
 
+def _safe_filename(filename: str) -> str:
+    """Strip path separators and dangerous chars from user-supplied filenames."""
+    import re
+    # Remove any leading path components (../../etc)
+    base = os.path.basename(filename)
+    # Remove any non-alphanumeric except . - _ and space
+    safe = re.sub(r'[^\w.\- ]', '', base)
+    return safe or f"upload_{uuid.uuid4().hex}.bin"
+
+
 @router.post("/upload-with-ai")
 async def upload_with_ai(
     file: UploadFile = File(...),
@@ -38,7 +48,7 @@ async def upload_with_ai(
             detail=f"Unsupported file type: {ext}. Supported: {', '.join(allowed_types)}"
         )
 
-    safe_name = f"{datetime.utcnow().timestamp()}_{current_user["id"]}_{file.filename}"
+    safe_name = f"{datetime.utcnow().timestamp()}_{current_user['id']}_{_safe_filename(file.filename)}"
     file_path = UPLOAD_DIR / safe_name
 
     try:
@@ -129,7 +139,7 @@ async def batch_upload_with_ai(
     results = []
     for file in files:
         ext = Path(file.filename).suffix.lower()
-        safe_name = f"{datetime.utcnow().timestamp()}_{current_user["id"]}_{file.filename}"
+        safe_name = f"{datetime.utcnow().timestamp()}_{current_user['id']}_{_safe_filename(file.filename)}"
         file_path = UPLOAD_DIR / safe_name
 
         try:

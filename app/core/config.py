@@ -20,11 +20,6 @@ class Settings(BaseSettings):
         "https://www.taxsight.ai",
     ]
 
-    # JWT
-    SECRET_KEY: str = "change-me-in-production"
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
-
     # Upload
     MAX_UPLOAD_SIZE_MB: int = 10
     UPLOAD_DIR: str = "/tmp/taxsight-uploads"

@@ -149,13 +149,13 @@ async def delete_document(document_id: int, current_user=Depends(get_current_use
         os.remove(file_path)
 
     from app.core.database import rest_delete
-    rest_delete("extracted_data", {"document_id": f"eq.{document_id}"})
-    rest_delete("documents", {"id": f"eq.{document_id}"})
+    rest_delete("extracted_data", "document_id", document_id)
+    rest_delete("documents", "id", document_id)
 
 
 @router.get("/{document_id}", response_model=DocumentResponse)
-async def get_document(document_id: int):
-    rows = rest_get("documents", {"id": f"eq.{document_id}", "select": "*"})
+async def get_document(document_id: int, current_user=Depends(get_current_user)):
+    rows = rest_get("documents", {"id": f"eq.{document_id}", "user_id": f"eq.{current_user['id']}", "select": "*"})
     if not rows:
         raise HTTPException(status_code=404, detail="Document not found")
 
@@ -188,8 +188,8 @@ async def get_document(document_id: int):
 
 
 @router.get("/{document_id}/data", response_model=DocumentDataResponse)
-async def get_document_data(document_id: int):
-    rows = rest_get("documents", {"id": f"eq.{document_id}", "select": "id,status"})
+async def get_document_data(document_id: int, current_user=Depends(get_current_user)):
+    rows = rest_get("documents", {"id": f"eq.{document_id}", "user_id": f"eq.{current_user['id']}", "select": "id,status"})
     if not rows:
         raise HTTPException(status_code=404, detail="Document not found")
 
