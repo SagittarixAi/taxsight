@@ -28,6 +28,16 @@ class LoginRequest(BaseModel):
         return v
 
 
+class UserResponse(BaseModel):
+    id: int
+    email: str
+    full_name: str | None
+    tier: str | None = None
+    created_at: datetime
+
+    model_config = {"from_attributes": True}
+
+
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str = "bearer"
