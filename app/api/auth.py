@@ -1,11 +1,10 @@
 """Authentication API endpoints — Supabase Auth backend."""
 
 from fastapi import APIRouter, Depends, HTTPException, Request, status
-from fastapi.security import OAuth2PasswordRequestForm
 
 from app.core.database import get_supabase, rest_insert, fetch_user_by_email
 from app.core.security import get_current_user
-from app.schemas.auth import UserCreate, UserResponse
+from app.schemas.auth import UserCreate, LoginRequest, UserResponse
 from app.services.audit import log_action, get_client_ip
 
 router = APIRouter()
@@ -59,12 +58,12 @@ def register(payload: UserCreate, request: Request):
 
 
 @router.post("/login")
-def login(form_data: OAuth2PasswordRequestForm = Depends(), request: Request = None):
+def login(payload: LoginRequest, request: Request):
     """Login via Supabase Auth."""
     supabase = get_supabase()
     try:
         auth_response = supabase.auth.sign_in_with_password(
-            {"email": form_data.username, "password": form_data.password}
+            {"email": payload.email, "password": payload.password}
         )
     except Exception as e:
         raise HTTPException(
@@ -80,7 +79,7 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), request: Request = N
         action="user.login",
         resource_type="user",
         resource_id=str(auth_user.id),
-        ip_address=get_client_ip(request) if request else None,
+        ip_address=get_client_ip(request),
     )
 
     return {
